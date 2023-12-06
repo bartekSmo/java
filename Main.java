@@ -7,13 +7,7 @@ public class Main {
         Kalendarz kalendarz = new Kalendarz(7);
         System.out.println("kalendarz");
         int wybor;
-        ArrayList<Spotkanie> dziennik = kalendarz.getSpotkanie(0);
-        Spotkanie spotkanieProba = new Spotkanie("obiad",LocalTime.of(8,30),LocalTime.of(8,45),"High");
-        Spotkanie spotkanieProba2 = new Spotkanie("sniadanie",LocalTime.of(9,30),LocalTime.of(9,45),"High");
-        Spotkanie spotkanieProba3 = new Spotkanie("kolacja",LocalTime.of(10,30),LocalTime.of(10,45),"Low");
-        dziennik.add(spotkanieProba);
-        dziennik.add(spotkanieProba2);
-        dziennik.add(spotkanieProba3);
+        kalendarz.dodaniePrzykladowychSpotkan();
         do{
             menuInfo();
             wybor = scanner.nextInt();
@@ -21,7 +15,16 @@ public class Main {
         }while (wybor != 0);
     }
     private static void menuInfo(){
-        System.out.println("1)pokazanie\n2)stworzenie\n3)usuniecie\n4)priorytet\n5)nie wczesniej\n6)pomiedzy czasami\n7)priorytet + do czasu\n0)Wyjscie");
+        System.out.println("--------------------------------------------------------------------------------------------");
+        System.out.println("1) pokazanie spotkan w podanym dniu");
+        System.out.println("2) Stworzenie spotkania");
+        System.out.println("3) usuniecie podanego spotkania w danym dniu");
+        System.out.println("4) wyswietlenie spotkania w danym dniu z podanym priorytetem");
+        System.out.println("5) wyswietlenie spotkania ktore zaczyna sie nie wczesniej niz podany czas");
+        System.out.println("6) wyswietlenie spotkania ktorego czas jest pomiedzy danymi godzinami");
+        System.out.println("7) wyswietlenie spotkania ktore koncza sie przed podana godzina i maja okreslony priorytet");
+        System.out.println("0) koniec\n");
+        System.out.println("--------------------------------------------------------------------------------------------");
     }
     private static void menu(Scanner scanner, int wybor,  Kalendarz kalendarz){
         switch (wybor){
@@ -35,22 +38,21 @@ public class Main {
             }
             case 4 -> {
                 String priorytet = podajPriorytet(scanner);
-                show(kalendarz.cleaner(a -> a.getPriorytet().equals(priorytet),kalendarz,ktoryDzien(scanner)));
+                show(kalendarz.filtrListBy(a -> a.getPriorytet().equalsIgnoreCase(priorytet),ktoryDzien(scanner)));
             }
             case 5 -> {
                 LocalTime poczatek = podajCzasy(scanner);
-                show(kalendarz.cleaner(a -> a.getCzasPoczatku().isAfter(poczatek),kalendarz,ktoryDzien(scanner)));}
+                show(kalendarz.filtrListBy(a -> a.getCzasPoczatku().isAfter(poczatek) || a.getCzasPoczatku().equals(poczatek),ktoryDzien(scanner)));}
             case 6 ->{
                 LocalTime poczatek = podajCzasy(scanner);
                 LocalTime koniec = podajCzasy(scanner);
-                show(kalendarz.cleaner(a -> (a.getCzasKonca().isBefore(koniec) || a.getCzasKonca().equals(koniec)) && (a.getCzasPoczatku().isAfter(poczatek) || a.getCzasPoczatku().equals(poczatek)),kalendarz,ktoryDzien(scanner)));
+                show(kalendarz.filtrListBy(a -> (a.getCzasKonca().isBefore(koniec) || a.getCzasKonca().equals(koniec)) && (a.getCzasPoczatku().isAfter(poczatek) || a.getCzasPoczatku().equals(poczatek)),ktoryDzien(scanner)));
             }
             case 7 ->{
                 LocalTime koniec = podajCzasy(scanner);
                 String priorytet = podajPriorytet(scanner);
-                show(kalendarz.cleaner(a -> a.getCzasPoczatku().isBefore(koniec) && a.getPriorytet().equalsIgnoreCase(priorytet) ,kalendarz,ktoryDzien(scanner)));
+                show(kalendarz.filtrListBy(a -> a.getCzasPoczatku().isBefore(koniec) && a.getPriorytet().equalsIgnoreCase(priorytet) ,ktoryDzien(scanner)));
             }
-
             case 0 -> System.out.println("bye!");
             default -> System.out.println("zla wartosc");
         }
@@ -61,10 +63,11 @@ public class Main {
         }
     }
     private static void stworzSpotkanie(Scanner scanner, Kalendarz kalendarz){
+        Scanner sc2 = new Scanner(System.in);
         int dzien = ktoryDzien(scanner);
         String opis;
         System.out.println("Podaj opis spotkania: ");
-        opis = scanner.next();
+        opis = sc2.nextLine();
         System.out.println("Podaj czas zaczecia pozniejszy niz 08:00: ");
         LocalTime czas1 = LocalTime.parse(scanner.next());
         System.out.println("Podaj czas zakonczenia: ");
@@ -85,7 +88,7 @@ public class Main {
         int ktora;
         System.out.println("podaj ktore spotkanie chcesz usunac");
         ktora = scanner.nextInt();
-        if(kalendarz.czyJestTakieSpotkanie(dzien, kalendarz, ktora))
+        if(kalendarz.czyJestTakieSpotkanie(dzien, ktora))
             return ktora;
         return -1;
     }
@@ -94,12 +97,5 @@ public class Main {
         System.out.println("Podaj dzien: ");
         ktory = scanner.nextInt();
         return ktory - 1;
-    }
-    private static void ktoryPriorytet(Scanner scanner, Kalendarz kalendarz){
-        ArrayList<Spotkanie> dziennik = kalendarz.getSpotkanie(ktoryDzien(scanner));
-        System.out.println("podaj jaki priorytet High, Medium, Low");
-        String jaki = scanner.next();
-        ArrayList<Spotkanie> cleanedDziennik = kalendarz.cleanSpotkania(dziennik,jaki);
-        show(cleanedDziennik);
     }
 }
