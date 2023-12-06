@@ -1,89 +1,105 @@
 import java.time.*;
 import java.util.ArrayList;
 import java.util.Scanner;
-
-
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        Kalendarz kalendarz = new Kalendarz(7);//wybor ile dni planujemy
+        Kalendarz kalendarz = new Kalendarz(7);
         System.out.println("kalendarz");
-
-        ArrayList<Spotkanie> dziennik = kalendarz.getSpotkanie(1);//dziennik = arraylista majaca obiekty Spotkania z danego dnia
+        int wybor;
+        ArrayList<Spotkanie> dziennik = kalendarz.getSpotkanie(0);
+        Spotkanie spotkanieProba = new Spotkanie("obiad",LocalTime.of(8,30),LocalTime.of(8,45),"High");
+        Spotkanie spotkanieProba2 = new Spotkanie("sniadanie",LocalTime.of(9,30),LocalTime.of(9,45),"High");
+        Spotkanie spotkanieProba3 = new Spotkanie("kolacja",LocalTime.of(10,30),LocalTime.of(10,45),"Low");
+        dziennik.add(spotkanieProba);
+        dziennik.add(spotkanieProba2);
+        dziennik.add(spotkanieProba3);
         do{
-            System.out.println("1)pokazanie\n2)stworzenie\n3)usuniecie\n4)priorytet");
-            int wybor = scanner.nextInt();
-            if(wybor == 5){
-                System.out.println("koniec programu");
-                break;
-            }
-            menu(scanner,wybor,dziennik,kalendarz);
-        }while (true);
+            menuInfo();
+            wybor = scanner.nextInt();
+            menu(scanner, wybor, kalendarz);
+        }while (wybor != 0);
     }
-    public static void show(Kalendarz kalendarz, Scanner scanner){
-        ArrayList<Spotkanie> dziennik = kalendarz.getSpotkanie(ktoryDzien(scanner));//array listy
-        for(Spotkanie wartosci : dziennik){//przechodzenie przez arrayListy obiektem Spotkanie
-            System.out.println(wartosci.naString());
-        }
+    private static void menuInfo(){
+        System.out.println("1)pokazanie\n2)stworzenie\n3)usuniecie\n4)priorytet\n5)nie wczesniej\n6)pomiedzy czasami\n7)priorytet + do czasu\n0)Wyjscie");
     }
-    public static void menu(Scanner scanner,int wybor, ArrayList<Spotkanie> dziennik, Kalendarz kalendarz){
+    private static void menu(Scanner scanner, int wybor,  Kalendarz kalendarz){
         switch (wybor){
-            case 1 -> show(kalendarz,scanner);
-            case 2 -> {
-                int dzien = ktoryDzien(scanner);// potrzebujemy wiedziec do jakiego dnia dodac
-                Spotkanie spotkanie2 = stworzSpotkanie(scanner);//tworzymy obiekt Spotkanie z danymi od usera
-                kalendarz.addSpotkanie(dzien,spotkanie2);//dodajemy obiekt do arraylisty
-            }
+            case 1 -> show(kalendarz.getSpotkanie(ktoryDzien(scanner)));
+            case 2 -> stworzSpotkanie(scanner,kalendarz);//tworzymy obiekt Spotkanie z danymi od usera
             case 3->{
                 int dzien = ktoryDzien(scanner);
-                int ktore = ktoreSpotkanie(scanner,dziennik);//musimy wiedziec ktory index z arraylisty z dnia [[spotkanie1,spotkanie2...],[spotkanie1...]]
+                int ktore = ktoreSpotkanie(scanner ,kalendarz, dzien);//musimy wiedziec ktory index z arraylisty z dnia [[spotkanie1,spotkanie2...],[spotkanie1...]]
                 if(ktore==-1){System.out.println("nie ma takiego spotkania");break;}
-                kalendarz.removeSpotkanie(dzien, dziennik.get(ktore));//usuwamy znajac dzien i index z listy dnia
+                kalendarz.removeSpotkanie(dzien, kalendarz.getSpotkanie(dzien).get(ktore));//usuwamy znajac dzien i index z listy dnia
             }
-            case 4 -> ktoryPriorytet(scanner, kalendarz);
+            case 4 -> {
+                String priorytet = podajPriorytet(scanner);
+                show(kalendarz.cleaner(a -> a.getPriorytet().equals(priorytet),kalendarz,ktoryDzien(scanner)));
+            }
+            case 5 -> {
+                LocalTime poczatek = podajCzasy(scanner);
+                show(kalendarz.cleaner(a -> a.getCzasPoczatku().isAfter(poczatek),kalendarz,ktoryDzien(scanner)));}
+            case 6 ->{
+                LocalTime poczatek = podajCzasy(scanner);
+                LocalTime koniec = podajCzasy(scanner);
+                show(kalendarz.cleaner(a -> (a.getCzasKonca().isBefore(koniec) || a.getCzasKonca().equals(koniec)) && (a.getCzasPoczatku().isAfter(poczatek) || a.getCzasPoczatku().equals(poczatek)),kalendarz,ktoryDzien(scanner)));
+            }
+            case 7 ->{
+                LocalTime koniec = podajCzasy(scanner);
+                String priorytet = podajPriorytet(scanner);
+                show(kalendarz.cleaner(a -> a.getCzasPoczatku().isBefore(koniec) && a.getPriorytet().equalsIgnoreCase(priorytet) ,kalendarz,ktoryDzien(scanner)));
+            }
+
+            case 0 -> System.out.println("bye!");
+            default -> System.out.println("zla wartosc");
         }
     }
-    public static Spotkanie stworzSpotkanie(Scanner scanner){
+    private static void show(ArrayList<Spotkanie> dziennik){
+        for(Spotkanie wartosci : dziennik){
+            System.out.println(wartosci);
+        }
+    }
+    private static void stworzSpotkanie(Scanner scanner, Kalendarz kalendarz){
+        int dzien = ktoryDzien(scanner);
         String opis;
         System.out.println("Podaj opis spotkania: ");
         opis = scanner.next();
         System.out.println("Podaj czas zaczecia pozniejszy niz 08:00: ");
-        LocalTime czas3 = LocalTime.parse(scanner.next());
+        LocalTime czas1 = LocalTime.parse(scanner.next());
         System.out.println("Podaj czas zakonczenia: ");
-        LocalTime czas4 = LocalTime.parse(scanner.next());
+        LocalTime czas2 = LocalTime.parse(scanner.next());
         System.out.println("Podaj priorytet High,Medium,Low: ");
         String priorytet = scanner.next();
-        Spotkanie stworzoneSpotkanie = new Spotkanie(opis,czas3,czas4,priorytet);
-        if(stworzoneSpotkanie.czyWczesnie()){
-            System.out.println("za wczesnie!");
-            return stworzSpotkanie(scanner);//to stworzy znowu obiekt wiec poprzedni starci ref i bedzie pod garbage collectorem
-        }
-        return  stworzoneSpotkanie;
+        kalendarz.stworzSpotkanie(opis,czas1,czas2,priorytet, dzien);
     }
-    public static int ktoreSpotkanie(Scanner scanner, ArrayList<Spotkanie> dziennik){
+    private static LocalTime podajCzasy(Scanner scanner){
+        System.out.println("Podaj Godzine: ");
+        return LocalTime.parse(scanner.next());
+    }
+    private  static String podajPriorytet(Scanner scanner){
+        System.out.println("Podaj priorytet: High,Medium,Low ");
+        return scanner.next();
+    }
+    private static int ktoreSpotkanie(Scanner scanner, Kalendarz kalendarz, int dzien){
         int ktora;
         System.out.println("podaj ktore spotkanie chcesz usunac");
         ktora = scanner.nextInt();
-        if (ktora>dziennik.size())
-            return -1;
-        return ktora -1;
+        if(kalendarz.czyJestTakieSpotkanie(dzien, kalendarz, ktora))
+            return ktora;
+        return -1;
     }
-    public static int ktoryDzien(Scanner scanner){
+    private static int ktoryDzien(Scanner scanner){
         int ktory;
         System.out.println("Podaj dzien: ");
         ktory = scanner.nextInt();
-        return ktory-1;
+        return ktory - 1;
     }
-    public static void ktoryPriorytet(Scanner scanner, Kalendarz kalendarz){
+    private static void ktoryPriorytet(Scanner scanner, Kalendarz kalendarz){
         ArrayList<Spotkanie> dziennik = kalendarz.getSpotkanie(ktoryDzien(scanner));
         System.out.println("podaj jaki priorytet High, Medium, Low");
         String jaki = scanner.next();
-        int i = 0;
-        for(Spotkanie wartosci : dziennik){//sprawdzamy [[spotaknie1,spotkanie2,...]]
-            i++;
-            if(wartosci.getPriorytet().equals(jaki)){//wyjmujemy priorytet jako string z spotkanie[1...] i porowannie
-                System.out.println(dziennik.get(i-1).naString());//jak prownanie ok to printujemy cale spotkanie
-            }
-        }
+        ArrayList<Spotkanie> cleanedDziennik = kalendarz.cleanSpotkania(dziennik,jaki);
+        show(cleanedDziennik);
     }
 }
